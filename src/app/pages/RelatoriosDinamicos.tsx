@@ -217,11 +217,11 @@ export function RelatoriosDinamicos() {
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row">
-          <Button variant="outline" size="lg" className="h-11 rounded-xl border-slate-200 bg-white px-5 text-slate-700 hover:bg-slate-50">
+          <Button variant="outline" size="lg" className="h-11 w-full rounded-xl border-slate-200 bg-white px-5 text-slate-700 hover:bg-slate-50 sm:w-auto">
             <Bot className="h-4 w-4" />
             Salvar automação
           </Button>
-          <Button size="lg" className="h-11 rounded-xl bg-[#2563EB] px-5 text-white shadow-[0_12px_24px_rgba(37,99,235,0.18)] hover:bg-[#1D4ED8]">
+          <Button size="lg" className="h-11 w-full rounded-xl bg-[#2563EB] px-5 text-white shadow-[0_12px_24px_rgba(37,99,235,0.18)] hover:bg-[#1D4ED8] sm:w-auto">
             <Sparkles className="h-4 w-4" />
             Gerar PDF agora
           </Button>
@@ -296,12 +296,12 @@ export function RelatoriosDinamicos() {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.95fr)]">
+      <section className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.95fr)]">
         <div className="space-y-6">
           <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Catálogo de relatórios</p>
             <h2 className="mt-1 text-xl font-semibold text-slate-900">Modelos prontos para gerar em PDF</h2>
-            <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-3">
+            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
               {reportCards.map((report) => {
                 const Icon = report.icon;
                 return (

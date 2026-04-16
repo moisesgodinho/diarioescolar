@@ -55,10 +55,10 @@ export function Configuracoes() {
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row">
-          <Button variant="outline" size="lg" className="h-11 rounded-xl border-slate-200 bg-white px-5 text-slate-700 hover:bg-slate-50">
+          <Button variant="outline" size="lg" className="h-11 w-full rounded-xl border-slate-200 bg-white px-5 text-slate-700 hover:bg-slate-50 sm:w-auto">
             Restaurar padrões
           </Button>
-          <Button size="lg" className="h-11 rounded-xl bg-[#2563EB] px-5 text-white shadow-[0_12px_24px_rgba(37,99,235,0.18)] hover:bg-[#1D4ED8]">
+          <Button size="lg" className="h-11 w-full rounded-xl bg-[#2563EB] px-5 text-white shadow-[0_12px_24px_rgba(37,99,235,0.18)] hover:bg-[#1D4ED8] sm:w-auto">
             <Save className="h-4 w-4" />
             Salvar ajustes
           </Button>
@@ -72,7 +72,7 @@ export function Configuracoes() {
         <MetricCard title="Controles de segurança" value="12" icon={ShieldCheck} iconColor="text-amber-600" iconBgColor="bg-amber-50" />
       </div>
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.95fr)]">
+      <section className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.95fr)]">
         <div className="space-y-6">
           <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
             <div className="mb-5 flex flex-col gap-3 border-b border-slate-100 pb-5 lg:flex-row lg:items-center lg:justify-between">

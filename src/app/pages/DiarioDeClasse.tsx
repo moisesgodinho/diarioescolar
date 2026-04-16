@@ -1,16 +1,16 @@
 import { useState } from 'react';
-import { Button } from '../components/ui/button';
-import { Avatar, AvatarFallback } from '../components/ui/avatar';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '../components/ui/select';
-import { Input } from '../components/ui/input';
-import { Check, X, Save } from 'lucide-react';
 import { toast } from 'sonner';
+import { Check, Save, X } from 'lucide-react';
+import { Avatar, AvatarFallback } from '../components/ui/avatar';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
 
 interface Aluno {
   id: number;
@@ -43,21 +43,15 @@ export function DiarioDeClasse() {
   const [data, setData] = useState('2026-04-16');
 
   const togglePresenca = (id: number) => {
-    setAlunos(alunos.map(aluno => 
-      aluno.id === id ? { ...aluno, presente: !aluno.presente } : aluno
-    ));
+    setAlunos(alunos.map((aluno) => (aluno.id === id ? { ...aluno, presente: !aluno.presente } : aluno)));
   };
 
   const atualizarNota = (id: number, nota: string) => {
-    setAlunos(alunos.map(aluno => 
-      aluno.id === id ? { ...aluno, nota } : aluno
-    ));
+    setAlunos(alunos.map((aluno) => (aluno.id === id ? { ...aluno, nota } : aluno)));
   };
 
   const atualizarObservacoes = (id: number, observacoes: string) => {
-    setAlunos(alunos.map(aluno => 
-      aluno.id === id ? { ...aluno, observacoes } : aluno
-    ));
+    setAlunos(alunos.map((aluno) => (aluno.id === id ? { ...aluno, observacoes } : aluno)));
   };
 
   const salvarAlteracoes = () => {
@@ -66,34 +60,26 @@ export function DiarioDeClasse() {
     });
   };
 
-  const presentes = alunos.filter(a => a.presente).length;
+  const presentes = alunos.filter((aluno) => aluno.presente).length;
   const percentualPresenca = ((presentes / alunos.length) * 100).toFixed(1);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Diário de Classe - Turma 8º Ano A</h1>
-          <p className="text-gray-600 mt-1">
-            Gerencie presença, notas e observações dos alunos
-          </p>
+          <p className="mt-1 text-gray-600">Gerencie presença, notas e observações dos alunos.</p>
         </div>
-        <Button 
-          onClick={salvarAlteracoes}
-          className="bg-blue-600 hover:bg-blue-700 text-white"
-          size="lg"
-        >
-          <Save className="w-4 h-4 mr-2" />
+        <Button onClick={salvarAlteracoes} className="w-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto" size="lg">
+          <Save className="mr-2 h-4 w-4" />
           Salvar Alterações
         </Button>
       </div>
 
-      {/* Filtros */}
-      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div>
-            <label className="text-sm text-gray-700 mb-2 block">Disciplina</label>
+            <label className="mb-2 block text-sm text-gray-700">Disciplina</label>
             <Select value={disciplina} onValueChange={setDisciplina}>
               <SelectTrigger className="bg-gray-50">
                 <SelectValue />
@@ -110,7 +96,7 @@ export function DiarioDeClasse() {
           </div>
 
           <div>
-            <label className="text-sm text-gray-700 mb-2 block">Bimestre</label>
+            <label className="mb-2 block text-sm text-gray-700">Bimestre</label>
             <Select value={bimestre} onValueChange={setBimestre}>
               <SelectTrigger className="bg-gray-50">
                 <SelectValue />
@@ -125,18 +111,13 @@ export function DiarioDeClasse() {
           </div>
 
           <div>
-            <label className="text-sm text-gray-700 mb-2 block">Data de Hoje</label>
-            <Input 
-              type="date" 
-              value={data}
-              onChange={(e) => setData(e.target.value)}
-              className="bg-gray-50"
-            />
+            <label className="mb-2 block text-sm text-gray-700">Data de hoje</label>
+            <Input type="date" value={data} onChange={(e) => setData(e.target.value)} className="bg-gray-50" />
           </div>
 
           <div>
-            <label className="text-sm text-gray-700 mb-2 block">Resumo de Presença</label>
-            <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-2.5">
+            <label className="mb-2 block text-sm text-gray-700">Resumo de presença</label>
+            <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-2.5">
               <p className="text-sm font-semibold text-green-800">
                 {presentes}/{alunos.length} presentes ({percentualPresenca}%)
               </p>
@@ -145,48 +126,89 @@ export function DiarioDeClasse() {
         </div>
       </div>
 
-      {/* Tabela de Alunos */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+      <div className="space-y-4 xl:hidden">
+        {alunos.map((aluno, index) => (
+          <div key={aluno.id} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-11 w-11">
+                  <AvatarFallback className="bg-blue-100 text-blue-700">{aluno.iniciais}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-medium text-gray-900">{aluno.nome}</p>
+                  <p className="text-sm text-gray-500">Aluno {String(index + 1).padStart(2, '0')}</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => togglePresenca(aluno.id)}
+                className={`flex h-10 min-w-20 items-center justify-center gap-2 rounded-lg px-3 transition-all ${
+                  aluno.presente
+                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                    : 'bg-red-100 text-red-700 hover:bg-red-200'
+                }`}
+              >
+                {aluno.presente ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                <span className="text-sm font-medium">{aluno.presente ? 'Sim' : 'Não'}</span>
+              </button>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-[120px_minmax(0,1fr)]">
+              <div>
+                <label className="mb-2 block text-sm text-gray-700">Nota</label>
+                <Input
+                  type="text"
+                  value={aluno.nota}
+                  onChange={(e) => atualizarNota(aluno.id, e.target.value)}
+                  className="bg-gray-50 text-center"
+                  placeholder="0.0"
+                  maxLength={4}
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm text-gray-700">Observações</label>
+                <Input
+                  type="text"
+                  value={aluno.observacoes}
+                  onChange={(e) => atualizarObservacoes(aluno.id, e.target.value)}
+                  className="bg-gray-50"
+                  placeholder="Adicione uma observação..."
+                />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm xl:block">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="border-b border-gray-200 bg-gray-50">
               <tr>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 w-16">#</th>
+                <th className="w-16 px-6 py-4 text-left text-sm font-semibold text-gray-900">#</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Aluno</th>
-                <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900 w-32">Presença</th>
-                <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900 w-32">Nota da Atividade</th>
+                <th className="w-32 px-6 py-4 text-center text-sm font-semibold text-gray-900">Presença</th>
+                <th className="w-32 px-6 py-4 text-center text-sm font-semibold text-gray-900">Nota</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Observações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {alunos.map((aluno, index) => (
-                <tr 
-                  key={aluno.id} 
-                  className="hover:bg-gray-50 transition-colors"
-                >
-                  {/* Número */}
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {String(index + 1).padStart(2, '0')}
-                  </td>
-
-                  {/* Aluno */}
+                <tr key={aluno.id} className="transition-colors hover:bg-gray-50">
+                  <td className="px-6 py-4 text-sm text-gray-600">{String(index + 1).padStart(2, '0')}</td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <Avatar className="w-10 h-10">
-                        <AvatarFallback className="bg-blue-100 text-blue-700">
-                          {aluno.iniciais}
-                        </AvatarFallback>
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback className="bg-blue-100 text-blue-700">{aluno.iniciais}</AvatarFallback>
                       </Avatar>
                       <span className="font-medium text-gray-900">{aluno.nome}</span>
                     </div>
                   </td>
-
-                  {/* Presença */}
                   <td className="px-6 py-4">
                     <div className="flex justify-center">
                       <button
                         onClick={() => togglePresenca(aluno.id)}
-                        className={`w-20 h-10 rounded-lg flex items-center justify-center gap-2 transition-all ${
+                        className={`flex h-10 w-20 items-center justify-center gap-2 rounded-lg transition-all ${
                           aluno.presente
                             ? 'bg-green-100 text-green-700 hover:bg-green-200'
                             : 'bg-red-100 text-red-700 hover:bg-red-200'
@@ -194,40 +216,36 @@ export function DiarioDeClasse() {
                       >
                         {aluno.presente ? (
                           <>
-                            <Check className="w-4 h-4" />
+                            <Check className="h-4 w-4" />
                             <span className="text-sm font-medium">Sim</span>
                           </>
                         ) : (
                           <>
-                            <X className="w-4 h-4" />
+                            <X className="h-4 w-4" />
                             <span className="text-sm font-medium">Não</span>
                           </>
                         )}
                       </button>
                     </div>
                   </td>
-
-                  {/* Nota */}
                   <td className="px-6 py-4">
                     <div className="flex justify-center">
                       <Input
                         type="text"
                         value={aluno.nota}
                         onChange={(e) => atualizarNota(aluno.id, e.target.value)}
-                        className="w-20 text-center bg-gray-50 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                        className="w-20 bg-gray-50 text-center"
                         placeholder="0.0"
                         maxLength={4}
                       />
                     </div>
                   </td>
-
-                  {/* Observações */}
                   <td className="px-6 py-4">
                     <Input
                       type="text"
                       value={aluno.observacoes}
                       onChange={(e) => atualizarObservacoes(aluno.id, e.target.value)}
-                      className="bg-gray-50 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                      className="bg-gray-50"
                       placeholder="Adicione uma observação..."
                     />
                   </td>
@@ -238,23 +256,14 @@ export function DiarioDeClasse() {
         </div>
       </div>
 
-      {/* Footer Info */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg px-6 py-4">
-        <div className="flex items-center justify-between text-sm">
-          <div className="flex items-center gap-8">
-            <p className="text-blue-800">
-              <span className="font-semibold">Total de alunos:</span> {alunos.length}
-            </p>
-            <p className="text-blue-800">
-              <span className="font-semibold">Presentes:</span> {presentes}
-            </p>
-            <p className="text-blue-800">
-              <span className="font-semibold">Ausentes:</span> {alunos.length - presentes}
-            </p>
+      <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-4 sm:px-6">
+        <div className="flex flex-col gap-3 text-sm lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-2 text-blue-800 sm:flex-row sm:flex-wrap sm:gap-6">
+            <p><span className="font-semibold">Total de alunos:</span> {alunos.length}</p>
+            <p><span className="font-semibold">Presentes:</span> {presentes}</p>
+            <p><span className="font-semibold">Ausentes:</span> {alunos.length - presentes}</p>
           </div>
-          <p className="text-blue-600 font-medium">
-            💡 Adeus papelada! Tudo digital e seguro.
-          </p>
+          <p className="font-medium text-blue-700">Tudo sincronizado e salvo com segurança.</p>
         </div>
       </div>
     </div>

@@ -400,7 +400,7 @@ export function CalendarioEscolar() {
 
         <Button
           size="lg"
-          className="h-11 rounded-xl bg-[#2563EB] px-5 text-white shadow-[0_12px_24px_rgba(37,99,235,0.18)] hover:bg-[#1D4ED8]"
+          className="h-11 w-full rounded-xl bg-[#2563EB] px-5 text-white shadow-[0_12px_24px_rgba(37,99,235,0.18)] hover:bg-[#1D4ED8] sm:w-auto"
         >
           <Plus className="h-4 w-4" />
           Adicionar Evento
@@ -409,7 +409,7 @@ export function CalendarioEscolar() {
 
       <section className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Button
               type="button"
               variant="outline"
@@ -476,7 +476,67 @@ export function CalendarioEscolar() {
 
             {view === 'month' && (
               <div className="overflow-hidden">
-                <div>
+                <div className="md:hidden space-y-3">
+                  {monthDays
+                    .filter((day) => isSameMonth(day, currentMonth))
+                    .map((day) => {
+                      const dayEvents = getEventsForDate(day);
+                      const isSelected = isSameDay(day, selectedDate);
+
+                      return (
+                        <button
+                          key={day.toISOString()}
+                          type="button"
+                          onClick={() => setSelectedDate(day)}
+                          className={cn(
+                            'w-full rounded-2xl border p-4 text-left transition-all',
+                            isSelected
+                              ? 'border-[#2563EB] bg-[#EFF6FF] shadow-[0_14px_26px_rgba(37,99,235,0.10)]'
+                              : 'border-slate-200 bg-[#F8F9FA]',
+                          )}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold text-slate-900">
+                                {capitalizeLabel(format(day, 'EEEE', { locale: ptBR }))}
+                              </p>
+                              <p className="mt-1 text-sm text-slate-500">{formatShortDate(day)}</p>
+                            </div>
+                            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+                              Dia {format(day, 'd')}
+                            </span>
+                          </div>
+
+                          <div className="mt-4 space-y-2">
+                            {dayEvents.length > 0 ? (
+                              dayEvents.map((event) => (
+                                <div
+                                  key={event.id}
+                                  className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2"
+                                >
+                                  <span
+                                    className={cn(
+                                      'h-2.5 w-2.5 rounded-full',
+                                      categoryStyles[event.category].dotClassName,
+                                    )}
+                                  />
+                                  <span className="truncate text-sm font-medium text-slate-700">
+                                    {event.title}
+                                  </span>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="rounded-2xl bg-white px-3 py-3 text-sm text-slate-500">
+                                Nenhum evento cadastrado para este dia.
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                </div>
+
+                <div className="hidden md:block">
                   <div className="mb-2 grid grid-cols-7 gap-2 md:mb-3 md:gap-2.5">
                     {weekdayLabels.map((weekday) => (
                       <div
