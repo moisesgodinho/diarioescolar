@@ -384,6 +384,9 @@ verify_jwt = false
 [functions.platform-import-school-catalog-batch]
 verify_jwt = false
 
+[functions.platform-manage-staff]
+verify_jwt = false
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 

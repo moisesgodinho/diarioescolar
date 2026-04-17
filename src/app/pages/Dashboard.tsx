@@ -245,6 +245,24 @@ function PlatformDashboard() {
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-4">
         <Card className="rounded-[28px] border-gray-200 bg-white shadow-sm">
           <CardHeader className="gap-3 border-b border-gray-100 pb-6">
+            <ShieldCheck className="h-6 w-6 text-blue-600" />
+            <CardTitle className="text-lg font-semibold text-gray-900">Equipe Global</CardTitle>
+            <CardDescription className="text-sm leading-6 text-gray-500">
+              Cadastre gestores/admins da plataforma e organize quem opera a camada global.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <Button asChild className="w-full rounded-xl bg-blue-600 text-white hover:bg-blue-700">
+              <Link to="/plataforma/equipe-global">
+                Abrir modulo
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-[28px] border-gray-200 bg-white shadow-sm">
+          <CardHeader className="gap-3 border-b border-gray-100 pb-6">
             <Landmark className="h-6 w-6 text-blue-600" />
             <CardTitle className="text-lg font-semibold text-gray-900">Secretarias de Educacao</CardTitle>
             <CardDescription className="text-sm leading-6 text-gray-500">

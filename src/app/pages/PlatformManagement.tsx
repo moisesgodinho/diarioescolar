@@ -64,6 +64,12 @@ export function PlatformManagement() {
 
   const modules: ModuleCard[] = [
     {
+      description: 'Cadastre gestores/admins da plataforma e mantenha a equipe global organizada.',
+      href: '/plataforma/equipe-global',
+      label: 'Equipe Global',
+      metric: `${overviewMetrics.platformStaffCount} pessoa(s)`,
+    },
+    {
       description: 'Cadastre a cidade, o secretario responsavel e todos os contatos institucionais.',
       href: '/plataforma/secretarias',
       label: 'Secretarias de Educacao',

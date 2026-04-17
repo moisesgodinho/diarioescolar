@@ -11,6 +11,7 @@ import { Login } from './pages/Login';
 import { NotFound } from './pages/NotFound';
 import { PlatformManagement } from './pages/PlatformManagement';
 import { PlatformInepCatalogImport } from './pages/PlatformInepCatalogImport';
+import { PlatformGlobalTeam } from './pages/PlatformGlobalTeam';
 import { PlatformSchoolPeople } from './pages/PlatformSchoolPeople';
 import { PlatformSchools } from './pages/PlatformSchools';
 import { PlatformSecretariats } from './pages/PlatformSecretariats';
@@ -59,6 +60,10 @@ export const router = createBrowserRouter([
               {
                 path: 'plataforma/importacao-inep',
                 Component: PlatformInepCatalogImport,
+              },
+              {
+                path: 'plataforma/equipe-global',
+                Component: PlatformGlobalTeam,
               },
             ],
           },

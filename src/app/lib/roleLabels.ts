@@ -7,7 +7,7 @@ export function getPlatformRoleLabel(role: PlatformRole) {
     case 'education_secretary':
       return 'Secretario de Educacao';
     case 'admin':
-      return 'Admin da Plataforma';
+      return 'Gestor/Admin da Plataforma';
     case 'support':
       return 'Suporte';
     default:

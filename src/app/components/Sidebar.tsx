@@ -9,6 +9,7 @@ import {
   MessageSquare,
   School,
   Settings,
+  ShieldCheck,
   UserRoundCog,
   Users,
 } from 'lucide-react';
@@ -54,6 +55,7 @@ function MenuItem({ icon, label, path, isActive, onNavigate }: MenuItemProps) {
 export const navigationItems: NavigationItem[] = [
   { audience: 'shared', icon: <LayoutDashboard />, label: 'Dashboard', path: '/' },
   { audience: 'platform', icon: <Building2 />, label: 'Gestao da Plataforma', path: '/plataforma' },
+  { audience: 'platform', icon: <ShieldCheck />, label: 'Equipe Global', path: '/plataforma/equipe-global' },
   { audience: 'platform', icon: <Landmark />, label: 'Secretarias', path: '/plataforma/secretarias' },
   { audience: 'platform', icon: <School />, label: 'Escolas', path: '/plataforma/escolas' },
   { audience: 'platform', icon: <UserRoundCog />, label: 'Diretores e Professores', path: '/plataforma/equipe-escolar' },
