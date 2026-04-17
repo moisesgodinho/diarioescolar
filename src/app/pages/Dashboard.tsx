@@ -18,13 +18,19 @@ import { Link } from 'react-router';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { MetricCard } from '../components/MetricCard';
 import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import {
+  getPlatformRegistryMetrics,
+  type PlatformRegistrySnapshot,
+} from '../lib/platformRegistry';
 import { useAuth } from '../providers/AuthProvider';
 import {
   getPlatformOverviewMetrics,
   loadPlatformOverviewData,
   type PlatformOverviewData,
 } from '../lib/platformOverview';
+import { usePlatformRegistry } from '../providers/PlatformRegistryProvider';
 
 const performanceData = [
   { turma: '1o A', desempenho: 8.5 },
@@ -118,6 +124,7 @@ function SchoolDashboard() {
 }
 
 function PlatformDashboard() {
+  const registry = usePlatformRegistry();
   const [isRefreshing, setIsRefreshing] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [overview, setOverview] = useState<PlatformOverviewData | null>(null);
@@ -136,7 +143,8 @@ function PlatformDashboard() {
     refreshOverview();
   }, []);
 
-  const metrics = overview
+  const registryMetrics = getPlatformRegistryMetrics(registry as PlatformRegistrySnapshot);
+  const overviewMetrics = overview
     ? getPlatformOverviewMetrics(overview)
     : {
         activeDirectorsCount: 0,
@@ -145,14 +153,28 @@ function PlatformDashboard() {
         platformStaffCount: 0,
         schoolsCount: 0,
       };
-
-  const recentSchools = overview?.managedSchools.slice(0, 4) ?? [];
-  const schoolsWithoutDirector =
-    overview?.managedSchools.filter((school) => school.director?.status !== 'active') ?? [];
-  const schoolsWithoutSecretary =
-    overview?.managedSchools.filter(
-      (school) => !school.secretaries.some((secretary) => secretary.status === 'active'),
-    ) ?? [];
+  const directorAssignments = registry.professionalAssignments.filter(
+    (assignment) => assignment.role === 'director',
+  );
+  const activeDirectorIds = new Set(directorAssignments.map((assignment) => assignment.profileId));
+  const recentSecretariats = registry.secretariats
+    .slice()
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+    .slice(0, 3);
+  const recentSchools = registry.registeredSchools
+    .slice()
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+    .slice(0, 4);
+  const schoolsWithoutDirector = registry.registeredSchools.filter(
+    (school) =>
+      !registry.professionalAssignments.some(
+        (assignment) => assignment.schoolId === school.id && assignment.role === 'director',
+      ),
+  );
+  const secretariatsWithoutSchool = registry.secretariats.filter(
+    (secretariat) =>
+      !registry.registeredSchools.some((school) => school.secretariatId === secretariat.id),
+  );
 
   return (
     <div className="space-y-6">
@@ -191,30 +213,30 @@ function PlatformDashboard() {
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          title="Escolas Cadastradas"
-          value={metrics.schoolsCount}
-          icon={Building2}
+          title="Secretarias Cadastradas"
+          value={registryMetrics.secretariatsCount}
+          icon={Landmark}
           iconColor="text-blue-600"
           iconBgColor="bg-blue-50"
         />
         <MetricCard
-          title="Diretores Ativos"
-          value={metrics.activeDirectorsCount}
-          icon={BadgeCheck}
+          title="Escolas da Operacao"
+          value={registryMetrics.registeredSchoolsCount}
+          icon={Building2}
           iconColor="text-emerald-600"
           iconBgColor="bg-emerald-50"
         />
         <MetricCard
-          title="Secretarias Ativas"
-          value={metrics.activeSecretariesCount}
-          icon={Users}
+          title="Diretores Vinculados"
+          value={activeDirectorIds.size}
+          icon={BadgeCheck}
           iconColor="text-cyan-600"
           iconBgColor="bg-cyan-50"
         />
         <MetricCard
           title="Convites Pendentes"
-          value={metrics.pendingSchoolInvitesCount}
-          icon={ClipboardList}
+          value={overviewMetrics.pendingSchoolInvitesCount}
+          icon={Users}
           iconColor="text-amber-600"
           iconBgColor="bg-amber-50"
         />
@@ -296,7 +318,7 @@ function PlatformDashboard() {
 
       {loadError && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          {loadError}
+          {loadError} O painel segue exibindo os dados locais da operacao normalmente.
         </div>
       )}
 
@@ -305,7 +327,7 @@ function PlatformDashboard() {
           <CardHeader className="gap-3 border-b border-gray-100 pb-6">
             <CardTitle className="text-xl font-semibold text-gray-900">Escolas Recentes</CardTitle>
             <CardDescription className="text-sm leading-6 text-gray-500">
-              Panorama das ultimas escolas cadastradas, sempre focado em diretor e secretaria.
+              Panorama das ultimas escolas cadastradas dentro da operacao atual.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -314,54 +336,74 @@ function PlatformDashboard() {
                 Nenhuma escola cadastrada ainda.
               </div>
             ) : (
-              recentSchools.map((school) => (
-                <div key={school.id} className="rounded-3xl border border-gray-100 bg-gray-50/70 p-5">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
-                      <p className="text-lg font-semibold text-gray-900">{school.name}</p>
-                      <p className="mt-1 text-xs uppercase tracking-[0.18em] text-gray-400">
-                        {school.slug}
-                      </p>
-                      {school.legalName && (
-                        <p className="mt-2 text-sm text-gray-500">{school.legalName}</p>
-                      )}
+              recentSchools.map((school) => {
+                const directorAssignment = registry.professionalAssignments.find(
+                  (assignment) => assignment.schoolId === school.id && assignment.role === 'director',
+                );
+                const directorProfile = directorAssignment
+                  ? registry.professionalProfiles.find(
+                      (profile) => profile.id === directorAssignment.profileId,
+                    ) ?? null
+                  : null;
+                const secretariat = registry.secretariats.find(
+                  (currentSecretariat) => currentSecretariat.id === school.secretariatId,
+                );
+
+                return (
+                  <div key={school.id} className="rounded-3xl border border-gray-100 bg-gray-50/70 p-5">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                      <div>
+                        <p className="text-lg font-semibold text-gray-900">{school.name}</p>
+                        <p className="mt-1 text-sm text-gray-500">
+                          {school.city}/{school.state}
+                          {school.neighborhood ? ` - ${school.neighborhood}` : ''}
+                        </p>
+                        {school.inepCode && (
+                          <p className="mt-2 text-xs uppercase tracking-[0.18em] text-gray-400">
+                            INEP {school.inepCode}
+                          </p>
+                        )}
+                      </div>
+
+                      <Badge
+                        className={
+                          school.source === 'inep'
+                            ? 'rounded-full border-blue-100 bg-blue-50 px-3 py-1 text-blue-700'
+                            : 'rounded-full border-amber-100 bg-amber-50 px-3 py-1 text-amber-700'
+                        }
+                      >
+                        {school.source === 'inep' ? 'INEP' : 'Manual'}
+                      </Badge>
                     </div>
 
-                    <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-                      {school.secretaries.filter((secretary) => secretary.status === 'active').length}{' '}
-                      secretaria(s) ativa(s)
+                    <div className="mt-5 grid gap-4 md:grid-cols-2">
+                      <div className="rounded-2xl border border-white bg-white p-4 shadow-sm">
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
+                          Diretor principal
+                        </p>
+                        <p className="mt-3 font-semibold text-gray-900">
+                          {directorProfile?.fullName || 'Diretor ainda nao vinculado'}
+                        </p>
+                        <p className="mt-1 text-sm text-gray-500">
+                          {directorProfile?.email || 'Sem email principal'}
+                        </p>
+                      </div>
+
+                      <div className="rounded-2xl border border-white bg-white p-4 shadow-sm">
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
+                          Secretaria responsavel
+                        </p>
+                        <p className="mt-3 font-semibold text-gray-900">
+                          {secretariat?.title || 'Secretaria ainda nao vinculada'}
+                        </p>
+                        <p className="mt-1 text-sm text-gray-500">
+                          {secretariat?.secretaryName || 'Cadastre a secretaria para destravar a operacao administrativa.'}
+                        </p>
+                      </div>
                     </div>
                   </div>
-
-                  <div className="mt-5 grid gap-4 md:grid-cols-2">
-                    <div className="rounded-2xl border border-white bg-white p-4 shadow-sm">
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
-                        Diretor principal
-                      </p>
-                      <p className="mt-3 font-semibold text-gray-900">
-                        {school.director?.fullName || 'Diretor ainda nao vinculado'}
-                      </p>
-                      <p className="mt-1 text-sm text-gray-500">
-                        {school.director?.email || 'Sem email principal'}
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl border border-white bg-white p-4 shadow-sm">
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
-                        Secretaria
-                      </p>
-                      <p className="mt-3 font-semibold text-gray-900">
-                        {school.secretaries.length > 0
-                          ? `${school.secretaries.length} pessoa(s) vinculada(s)`
-                          : 'Nenhuma secretaria vinculada'}
-                      </p>
-                      <p className="mt-1 text-sm text-gray-500">
-                        {school.secretaries[0]?.fullName || 'Cadastre a primeira secretaria para liberar operacao administrativa.'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </CardContent>
         </Card>
@@ -390,29 +432,69 @@ function PlatformDashboard() {
 
           <Card className="rounded-[28px] border-gray-200 bg-white shadow-sm">
             <CardHeader className="gap-3 border-b border-gray-100 pb-6">
-              <CardTitle className="text-lg font-semibold text-gray-900">Atencao imediata</CardTitle>
+              <CardTitle className="text-lg font-semibold text-gray-900">Cobertura recente</CardTitle>
               <CardDescription className="text-sm leading-6 text-gray-500">
-                Escolas que ainda precisam de cobertura minima para operar com tranquilidade.
+                Gargalos mais claros da operacao depois dos ultimos cadastros.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4">
-                <p className="text-sm font-semibold text-amber-900">Sem diretor ativo</p>
+                <p className="text-sm font-semibold text-amber-900">Escolas sem diretor</p>
                 <p className="mt-2 text-sm text-amber-800">
                   {schoolsWithoutDirector.length > 0
                     ? schoolsWithoutDirector.map((school) => school.name).join(', ')
-                    : 'Todas as escolas possuem diretor ativo.'}
+                    : 'Todas as escolas ja possuem diretor vinculado.'}
                 </p>
               </div>
 
               <div className="rounded-2xl border border-cyan-100 bg-cyan-50 p-4">
-                <p className="text-sm font-semibold text-cyan-900">Sem secretaria ativa</p>
+                <p className="text-sm font-semibold text-cyan-900">Secretarias sem escola</p>
                 <p className="mt-2 text-sm text-cyan-800">
-                  {schoolsWithoutSecretary.length > 0
-                    ? schoolsWithoutSecretary.map((school) => school.name).join(', ')
-                    : 'Todas as escolas ja contam com secretaria ativa.'}
+                  {secretariatsWithoutSchool.length > 0
+                    ? secretariatsWithoutSchool
+                        .map((secretariat) => `${secretariat.city}/${secretariat.state}`)
+                        .join(', ')
+                    : 'Todas as secretarias ja contam com ao menos uma escola cadastrada.'}
                 </p>
               </div>
+
+              <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                <p className="text-sm font-semibold text-gray-900">Equipe global</p>
+                <p className="mt-2 text-sm text-gray-700">
+                  {overviewMetrics.platformStaffCount} pessoa(s) na camada da plataforma e{' '}
+                  {overviewMetrics.activeSecretariesCount} secretaria(s) escolar(es) ativas no banco.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-[28px] border-gray-200 bg-white shadow-sm">
+            <CardHeader className="gap-3 border-b border-gray-100 pb-6">
+              <CardTitle className="text-lg font-semibold text-gray-900">Secretarias recentes</CardTitle>
+              <CardDescription className="text-sm leading-6 text-gray-500">
+                Ultimos territorios organizados dentro da operacao.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {recentSecretariats.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-5 text-sm text-gray-500">
+                  Nenhuma secretaria cadastrada ainda.
+                </div>
+              ) : (
+                recentSecretariats.map((secretariat) => (
+                  <div key={secretariat.id} className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-gray-900">{secretariat.city}/{secretariat.state}</p>
+                        <p className="text-sm text-gray-500">{secretariat.secretaryName}</p>
+                      </div>
+                      <Badge className="rounded-full border-blue-100 bg-blue-50 px-3 py-1 text-blue-700">
+                        Secretaria
+                      </Badge>
+                    </div>
+                  </div>
+                ))
+              )}
             </CardContent>
           </Card>
         </div>
