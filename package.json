@@ -5,7 +5,17 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "services:down": "docker compose -f infra/compose.yaml down",
+    "services:status": "docker compose -f infra/compose.yaml ps",
+    "services:stop": "docker compose -f infra/compose.yaml stop",
+    "services:up": "node scripts/ensure-docker-desktop.mjs && docker compose -f infra/compose.yaml up -d",
+    "supabase:env": "npx supabase status -o env",
+    "supabase:env:write": "node scripts/write-local-supabase-env.mjs",
+    "supabase:reset": "npx supabase db reset",
+    "supabase:start": "npx supabase start",
+    "supabase:status": "npx supabase status",
+    "supabase:stop": "npx supabase stop"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
@@ -36,9 +46,10 @@
     "@radix-ui/react-slot": "1.1.2",
     "@radix-ui/react-switch": "1.1.3",
     "@radix-ui/react-tabs": "1.1.3",
-    "@radix-ui/react-toggle-group": "1.1.2",
     "@radix-ui/react-toggle": "1.1.2",
+    "@radix-ui/react-toggle-group": "1.1.2",
     "@radix-ui/react-tooltip": "1.1.8",
+    "@supabase/supabase-js": "^2.103.3",
     "canvas-confetti": "1.9.4",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
@@ -67,6 +78,7 @@
   "devDependencies": {
     "@tailwindcss/vite": "4.1.12",
     "@vitejs/plugin-react": "4.7.0",
+    "supabase": "^2.92.0",
     "tailwindcss": "4.1.12",
     "vite": "6.3.5"
   },

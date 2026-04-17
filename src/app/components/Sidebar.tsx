@@ -1,21 +1,38 @@
 import {
   BookOpen,
+  Building2,
   Calendar,
+  Database,
   FileText,
   LayoutDashboard,
+  Landmark,
   MessageSquare,
+  School,
   Settings,
+  UserRoundCog,
   Users,
 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
+import { getPlatformRoleLabel } from '../lib/roleLabels';
+import { useAuth } from '../providers/AuthProvider';
 import { cn } from './ui/utils';
 
+type NavigationAudience = 'shared' | 'school' | 'platform';
+
 interface MenuItemProps {
-  icon: React.ReactNode;
+  icon: ReactNode;
+  isActive: boolean;
+  label: string;
+  onNavigate?: () => void;
+  path: string;
+}
+
+interface NavigationItem {
+  audience: NavigationAudience;
+  icon: ReactNode;
   label: string;
   path: string;
-  isActive: boolean;
-  onNavigate?: () => void;
 }
 
 function MenuItem({ icon, label, path, isActive, onNavigate }: MenuItemProps) {
@@ -34,14 +51,19 @@ function MenuItem({ icon, label, path, isActive, onNavigate }: MenuItemProps) {
   );
 }
 
-export const navigationItems = [
-  { icon: <LayoutDashboard />, label: 'Dashboard', path: '/' },
-  { icon: <BookOpen />, label: 'Diário de Classe', path: '/diario' },
-  { icon: <Users />, label: 'Gestão de Alunos', path: '/alunos' },
-  { icon: <FileText />, label: 'Relatórios', path: '/relatorios' },
-  { icon: <Calendar />, label: 'Calendário Escolar', path: '/calendario' },
-  { icon: <MessageSquare />, label: 'Comunicação', path: '/comunicacao' },
-  { icon: <Settings />, label: 'Configurações', path: '/configuracoes' },
+export const navigationItems: NavigationItem[] = [
+  { audience: 'shared', icon: <LayoutDashboard />, label: 'Dashboard', path: '/' },
+  { audience: 'platform', icon: <Building2 />, label: 'Gestao da Plataforma', path: '/plataforma' },
+  { audience: 'platform', icon: <Landmark />, label: 'Secretarias', path: '/plataforma/secretarias' },
+  { audience: 'platform', icon: <School />, label: 'Escolas', path: '/plataforma/escolas' },
+  { audience: 'platform', icon: <UserRoundCog />, label: 'Diretores e Professores', path: '/plataforma/equipe-escolar' },
+  { audience: 'platform', icon: <Database />, label: 'Importacao INEP', path: '/plataforma/importacao-inep' },
+  { audience: 'school', icon: <BookOpen />, label: 'Diario de Classe', path: '/diario' },
+  { audience: 'school', icon: <Users />, label: 'Gestao de Alunos', path: '/alunos' },
+  { audience: 'school', icon: <FileText />, label: 'Relatorios', path: '/relatorios' },
+  { audience: 'school', icon: <Calendar />, label: 'Calendario Escolar', path: '/calendario' },
+  { audience: 'school', icon: <MessageSquare />, label: 'Comunicacao', path: '/comunicacao' },
+  { audience: 'school', icon: <Settings />, label: 'Configuracoes', path: '/configuracoes' },
 ];
 
 interface SidebarContentProps {
@@ -51,6 +73,27 @@ interface SidebarContentProps {
 
 export function SidebarContent({ mobile = false, onNavigate }: SidebarContentProps) {
   const location = useLocation();
+  const { isPlatformStaff, platformRole } = useAuth();
+
+  function isItemActive(path: string) {
+    if (path === '/' || path === '/plataforma') {
+      return location.pathname === path;
+    }
+
+    return location.pathname === path || location.pathname.startsWith(`${path}/`);
+  }
+
+  const visibleNavigationItems = navigationItems.filter((item) => {
+    if (item.audience === 'shared') {
+      return true;
+    }
+
+    if (isPlatformStaff) {
+      return item.audience === 'platform';
+    }
+
+    return item.audience === 'school';
+  });
 
   return (
     <div className="flex h-full flex-col bg-white">
@@ -60,27 +103,32 @@ export function SidebarContent({ mobile = false, onNavigate }: SidebarContentPro
             <BookOpen className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-gray-900">Diário Escolar</h1>
-            <p className="text-xs text-gray-500">Sistema de Gestão</p>
+            <h1 className="text-lg font-bold text-gray-900">Diario Escolar</h1>
+            <p className="text-xs text-gray-500">Sistema de Gestao</p>
           </div>
         </div>
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-4">
-        {navigationItems.map((item) => (
+        {visibleNavigationItems.map((item) => (
           <MenuItem
             key={item.path}
             icon={item.icon}
             label={item.label}
             path={item.path}
-            isActive={location.pathname === item.path}
+            isActive={isItemActive(item.path)}
             onNavigate={onNavigate}
           />
         ))}
       </nav>
 
       <div className="border-t border-gray-200 p-4">
-        <p className="text-center text-xs text-gray-500">Versão 2.4.1</p>
+        {platformRole && (
+          <p className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.16em] text-blue-600">
+            {getPlatformRoleLabel(platformRole)}
+          </p>
+        )}
+        <p className="text-center text-xs text-gray-500">Versao 2.4.1</p>
       </div>
     </div>
   );
