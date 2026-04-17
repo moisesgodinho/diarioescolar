@@ -1,6 +1,15 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { BadgeCheck, BriefcaseBusiness, Search, ShieldCheck, UserPlus, Users } from 'lucide-react';
+import {
+  BadgeCheck,
+  BriefcaseBusiness,
+  Search,
+  ShieldCheck,
+  Trash2,
+  UserPlus,
+  Users,
+} from 'lucide-react';
 import { toast } from 'sonner';
+import { TypedConfirmDialog } from '../components/TypedConfirmDialog';
 import { MetricCard } from '../components/MetricCard';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -45,6 +54,7 @@ export function PlatformSchoolPeople() {
     professionalAssignments,
     professionalProfiles,
     registeredSchools,
+    removeProfessionalAssignment,
   } = usePlatformRegistry();
   const [selectedRole, setSelectedRole] = useState<SchoolStaffRole>('director');
   const [selectedSchoolId, setSelectedSchoolId] = useState('');
@@ -53,7 +63,14 @@ export function PlatformSchoolPeople() {
   const [formState, setFormState] = useState<ProfessionalFormState>(initialFormState);
 
   useEffect(() => {
-    if (!selectedSchoolId && registeredSchools.length > 0) {
+    if (registeredSchools.length === 0) {
+      setSelectedSchoolId('');
+      return;
+    }
+
+    const selectedStillExists = registeredSchools.some((school) => school.id === selectedSchoolId);
+
+    if (!selectedSchoolId || !selectedStillExists) {
       setSelectedSchoolId(registeredSchools[0].id);
     }
   }, [registeredSchools, selectedSchoolId]);
@@ -148,6 +165,21 @@ export function PlatformSchoolPeople() {
       discipline: '',
       notes: currentState.notes,
     }));
+  }
+
+  function handleRemoveAssignment(assignmentId: string) {
+    const result = removeProfessionalAssignment(assignmentId);
+
+    if (!result.assignment) {
+      toast.error('Nao foi possivel localizar o vinculo selecionado.');
+      return;
+    }
+
+    toast.success('Vinculo removido com sucesso.', {
+      description: result.removedProfile
+        ? `${result.removedProfile.fullName} ficou sem outros vinculos e o perfil foi removido da base local.`
+        : 'O cadastro pessoal foi mantido porque ainda existe em outra escola.',
+    });
   }
 
   return (
@@ -369,11 +401,36 @@ export function PlatformSchoolPeople() {
                             <p className="font-semibold text-gray-900">{school?.name || 'Escola vinculada'}</p>
                             <p className="text-sm text-gray-500">{assignment.role === 'director' ? 'Diretor' : 'Professor'}</p>
                           </div>
-                          {assignment.discipline && (
-                            <Badge className="rounded-full border-cyan-100 bg-cyan-50 px-3 py-1 text-cyan-700">
-                              {assignment.discipline}
-                            </Badge>
-                          )}
+                          <div className="flex flex-wrap items-center justify-end gap-2">
+                            {assignment.discipline && (
+                              <Badge className="rounded-full border-cyan-100 bg-cyan-50 px-3 py-1 text-cyan-700">
+                                {assignment.discipline}
+                              </Badge>
+                            )}
+                            <TypedConfirmDialog
+                              title="Remover vinculo"
+                              description="Essa acao desfaz apenas o vinculo atual com a escola. O perfil pessoal so sera removido se nao existir em nenhuma outra unidade."
+                              confirmationValue={`REMOVER ${formatCpf(matchedProfile.cpf)}`}
+                              confirmButtonLabel="Remover vinculo"
+                              details={
+                                <p>
+                                  Vinculo atual: {matchedProfile.fullName} em {school?.name || 'escola vinculada'}.
+                                </p>
+                              }
+                              onConfirm={() => handleRemoveAssignment(assignment.id)}
+                              trigger={
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="rounded-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  Remover
+                                </Button>
+                              }
+                            />
+                          </div>
                         </div>
                       </div>
                     );
@@ -418,36 +475,67 @@ export function PlatformSchoolPeople() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {recentAssignments.map((assignment) => {
-            const profile = professionalProfiles.find(
-              (currentProfile) => currentProfile.id === assignment.profileId,
-            );
-            const school = registeredSchools.find((currentSchool) => currentSchool.id === assignment.schoolId);
+          {recentAssignments.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-5 text-sm text-gray-500">
+              Nenhum vinculo criado ainda.
+            </div>
+          ) : (
+            recentAssignments.map((assignment) => {
+              const profile = professionalProfiles.find(
+                (currentProfile) => currentProfile.id === assignment.profileId,
+              );
+              const school = registeredSchools.find((currentSchool) => currentSchool.id === assignment.schoolId);
 
-            return (
-              <div key={assignment.id} className="rounded-2xl border border-gray-100 bg-gray-50 p-4 sm:p-5">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="font-semibold text-gray-900">{profile?.fullName || 'Profissional vinculado'}</p>
-                    <p className="mt-1 text-sm text-gray-500">
-                      {school?.name || 'Escola vinculada'} • {assignment.role === 'director' ? 'Diretor' : 'Professor'}
-                    </p>
-                  </div>
+              return (
+                <div key={assignment.id} className="rounded-2xl border border-gray-100 bg-gray-50 p-4 sm:p-5">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-semibold text-gray-900">{profile?.fullName || 'Profissional vinculado'}</p>
+                      <p className="mt-1 text-sm text-gray-500">
+                        {school?.name || 'Escola vinculada'} - {assignment.role === 'director' ? 'Diretor' : 'Professor'}
+                      </p>
+                    </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    <Badge className="rounded-full border-slate-200 bg-white px-3 py-1 text-slate-700">
-                      {formatCpf(profile?.cpf ?? null)}
-                    </Badge>
-                    {assignment.discipline && (
-                      <Badge className="rounded-full border-cyan-100 bg-cyan-50 px-3 py-1 text-cyan-700">
-                        {assignment.discipline}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge className="rounded-full border-slate-200 bg-white px-3 py-1 text-slate-700">
+                        {formatCpf(profile?.cpf ?? null)}
                       </Badge>
-                    )}
+                      {assignment.discipline && (
+                        <Badge className="rounded-full border-cyan-100 bg-cyan-50 px-3 py-1 text-cyan-700">
+                          {assignment.discipline}
+                        </Badge>
+                      )}
+                      {profile ? (
+                        <TypedConfirmDialog
+                          title="Remover vinculo"
+                          description="Essa acao desfaz apenas o vinculo com a escola mostrada neste card."
+                          confirmationValue={`REMOVER ${formatCpf(profile.cpf)}`}
+                          confirmButtonLabel="Remover vinculo"
+                          details={
+                            <p>
+                              Vinculo atual: {profile.fullName} em {school?.name || 'escola vinculada'}.
+                            </p>
+                          }
+                          onConfirm={() => handleRemoveAssignment(assignment.id)}
+                          trigger={
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="rounded-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Remover
+                            </Button>
+                          }
+                        />
+                      ) : null}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </CardContent>
       </Card>
     </div>

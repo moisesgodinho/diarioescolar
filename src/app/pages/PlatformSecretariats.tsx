@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Landmark, Mail, MapPinned, MapPlus, Phone, ShieldCheck, Users } from 'lucide-react';
+import { Landmark, Mail, MapPinned, MapPlus, Phone, ShieldCheck, Trash2, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { TypedConfirmDialog } from '../components/TypedConfirmDialog';
 import { MetricCard } from '../components/MetricCard';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -54,7 +55,13 @@ const initialFormState: SecretariatFormState = {
 };
 
 export function PlatformSecretariats() {
-  const { addSecretariat, registeredSchools, secretariats } = usePlatformRegistry();
+  const {
+    addSecretariat,
+    professionalAssignments,
+    registeredSchools,
+    removeSecretariat,
+    secretariats,
+  } = usePlatformRegistry();
   const [formState, setFormState] = useState<SecretariatFormState>(initialFormState);
   const [resolvedCep, setResolvedCep] = useState<CepLookupResult | null>(null);
   const [lastResolvedZipCode, setLastResolvedZipCode] = useState('');
@@ -133,6 +140,19 @@ export function PlatformSecretariats() {
     setResolvedCep(null);
     setLastResolvedZipCode('');
     setZipCodeError(null);
+  }
+
+  function handleRemoveSecretariat(secretariatId: string) {
+    const result = removeSecretariat(secretariatId);
+
+    if (!result.secretariat) {
+      toast.error('Nao foi possivel localizar a secretaria selecionada.');
+      return;
+    }
+
+    toast.success('Secretaria removida com sucesso.', {
+      description: `${result.secretariat.city}/${result.secretariat.state} saiu da plataforma com ${result.removedSchoolsCount} escola(s), ${result.removedAssignmentsCount} vinculo(s) e ${result.removedProfilesCount} perfil(is) sem uso removidos.`,
+    });
   }
 
   const sortedSecretariats = secretariats
@@ -441,6 +461,14 @@ export function PlatformSecretariats() {
               secretariat.id,
               registeredSchools,
             ).length;
+            const linkedSchoolIds = new Set(
+              registeredSchools
+                .filter((school) => school.secretariatId === secretariat.id)
+                .map((school) => school.id),
+            );
+            const linkedAssignmentsCount = professionalAssignments.filter((assignment) =>
+              linkedSchoolIds.has(assignment.schoolId),
+            ).length;
 
             return (
               <div key={secretariat.id} className="rounded-[28px] border border-gray-100 bg-gray-50/70 p-5 sm:p-6">
@@ -462,9 +490,35 @@ export function PlatformSecretariats() {
                     )}
                   </div>
 
-                  <Badge className="rounded-full border-blue-100 bg-blue-50 px-3 py-1 text-blue-700">
-                    {schoolsCount} escola(s) vinculada(s)
-                  </Badge>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className="rounded-full border-blue-100 bg-blue-50 px-3 py-1 text-blue-700">
+                      {schoolsCount} escola(s) vinculada(s)
+                    </Badge>
+                    <TypedConfirmDialog
+                      title="Remover secretaria"
+                      description="Essa acao apaga a secretaria, as escolas vinculadas a ela e os vinculos da equipe que existirem apenas nessa rede."
+                      confirmationValue={`REMOVER ${secretariat.city} ${secretariat.state}`}
+                      confirmButtonLabel="Remover secretaria"
+                      details={
+                        <p>
+                          Impacto previsto: {schoolsCount} escola(s) e {linkedAssignmentsCount}{' '}
+                          vinculo(s) vinculados a {secretariat.city}/{secretariat.state}.
+                        </p>
+                      }
+                      onConfirm={() => handleRemoveSecretariat(secretariat.id)}
+                      trigger={
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Remover
+                        </Button>
+                      }
+                    />
+                  </div>
                 </div>
 
                 <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">

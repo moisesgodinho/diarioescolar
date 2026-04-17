@@ -57,6 +57,21 @@ interface PlatformRegistryContextValue extends PlatformRegistrySnapshot {
   addSecretariat: (input: CreateSecretariatInput) => EducationSecretariat;
   assignProfessionalToSchool: (input: AssignProfessionalInput) => AssignProfessionalResult;
   findProfileByCpf: (cpf: string) => ProfessionalProfile | null;
+  removeProfessionalAssignment: (assignmentId: string) => {
+    assignment: ProfessionalAssignment | null;
+    removedProfile: ProfessionalProfile | null;
+  };
+  removeSchool: (schoolId: string) => {
+    removedAssignmentsCount: number;
+    removedProfilesCount: number;
+    school: RegisteredSchool | null;
+  };
+  removeSecretariat: (secretariatId: string) => {
+    removedAssignmentsCount: number;
+    removedProfilesCount: number;
+    removedSchoolsCount: number;
+    secretariat: EducationSecretariat | null;
+  };
   registerManualSchool: (input: RegisterManualSchoolInput) => RegisteredSchool;
   registerSchoolFromCatalog: (input: {
     catalogSchool: SchoolCatalogEntry;
@@ -93,6 +108,32 @@ function mergeProfile(currentProfile: ProfessionalProfile, input: AssignProfessi
     fullName: input.fullName.trim() || currentProfile.fullName,
     notes: input.notes.trim() || currentProfile.notes,
     phone: normalizeDigits(input.phone) || currentProfile.phone,
+  };
+}
+
+function pruneProfilesWithoutAssignments(
+  profiles: ProfessionalProfile[],
+  assignments: ProfessionalAssignment[],
+  candidateProfileIds: Set<string>,
+) {
+  const activeProfileIds = new Set(assignments.map((assignment) => assignment.profileId));
+  const removedProfiles: ProfessionalProfile[] = [];
+  const nextProfiles = profiles.filter((profile) => {
+    if (!candidateProfileIds.has(profile.id)) {
+      return true;
+    }
+
+    if (activeProfileIds.has(profile.id)) {
+      return true;
+    }
+
+    removedProfiles.push(profile);
+    return false;
+  });
+
+  return {
+    nextProfiles,
+    removedProfiles,
   };
 }
 
@@ -239,6 +280,131 @@ export function PlatformRegistryProvider({ children }: { children: ReactNode }) 
     );
   }
 
+  function removeProfessionalAssignment(assignmentId: string) {
+    const assignment = snapshot.professionalAssignments.find(
+      (currentAssignment) => currentAssignment.id === assignmentId,
+    );
+
+    if (!assignment) {
+      return {
+        assignment: null,
+        removedProfile: null,
+      };
+    }
+
+    const nextAssignments = snapshot.professionalAssignments.filter(
+      (currentAssignment) => currentAssignment.id !== assignmentId,
+    );
+    const { nextProfiles, removedProfiles } = pruneProfilesWithoutAssignments(
+      snapshot.professionalProfiles,
+      nextAssignments,
+      new Set([assignment.profileId]),
+    );
+
+    setSnapshot({
+      ...snapshot,
+      professionalAssignments: nextAssignments,
+      professionalProfiles: nextProfiles,
+    });
+
+    return {
+      assignment,
+      removedProfile: removedProfiles[0] ?? null,
+    };
+  }
+
+  function removeSchool(schoolId: string) {
+    const school = snapshot.registeredSchools.find((currentSchool) => currentSchool.id === schoolId);
+
+    if (!school) {
+      return {
+        removedAssignmentsCount: 0,
+        removedProfilesCount: 0,
+        school: null,
+      };
+    }
+
+    const nextRegisteredSchools = snapshot.registeredSchools.filter(
+      (currentSchool) => currentSchool.id !== schoolId,
+    );
+    const removedAssignments = snapshot.professionalAssignments.filter(
+      (assignment) => assignment.schoolId === schoolId,
+    );
+    const nextAssignments = snapshot.professionalAssignments.filter(
+      (assignment) => assignment.schoolId !== schoolId,
+    );
+    const { nextProfiles, removedProfiles } = pruneProfilesWithoutAssignments(
+      snapshot.professionalProfiles,
+      nextAssignments,
+      new Set(removedAssignments.map((assignment) => assignment.profileId)),
+    );
+
+    setSnapshot({
+      ...snapshot,
+      professionalAssignments: nextAssignments,
+      professionalProfiles: nextProfiles,
+      registeredSchools: nextRegisteredSchools,
+    });
+
+    return {
+      removedAssignmentsCount: removedAssignments.length,
+      removedProfilesCount: removedProfiles.length,
+      school,
+    };
+  }
+
+  function removeSecretariat(secretariatId: string) {
+    const secretariat = snapshot.secretariats.find(
+      (currentSecretariat) => currentSecretariat.id === secretariatId,
+    );
+
+    if (!secretariat) {
+      return {
+        removedAssignmentsCount: 0,
+        removedProfilesCount: 0,
+        removedSchoolsCount: 0,
+        secretariat: null,
+      };
+    }
+
+    const schoolsToRemove = snapshot.registeredSchools.filter(
+      (school) => school.secretariatId === secretariatId,
+    );
+    const removedSchoolIds = new Set(schoolsToRemove.map((school) => school.id));
+    const nextSecretariats = snapshot.secretariats.filter(
+      (currentSecretariat) => currentSecretariat.id !== secretariatId,
+    );
+    const nextRegisteredSchools = snapshot.registeredSchools.filter(
+      (school) => school.secretariatId !== secretariatId,
+    );
+    const removedAssignments = snapshot.professionalAssignments.filter((assignment) =>
+      removedSchoolIds.has(assignment.schoolId),
+    );
+    const nextAssignments = snapshot.professionalAssignments.filter(
+      (assignment) => !removedSchoolIds.has(assignment.schoolId),
+    );
+    const { nextProfiles, removedProfiles } = pruneProfilesWithoutAssignments(
+      snapshot.professionalProfiles,
+      nextAssignments,
+      new Set(removedAssignments.map((assignment) => assignment.profileId)),
+    );
+
+    setSnapshot({
+      ...snapshot,
+      professionalAssignments: nextAssignments,
+      professionalProfiles: nextProfiles,
+      registeredSchools: nextRegisteredSchools,
+      secretariats: nextSecretariats,
+    });
+
+    return {
+      removedAssignmentsCount: removedAssignments.length,
+      removedProfilesCount: removedProfiles.length,
+      removedSchoolsCount: schoolsToRemove.length,
+      secretariat,
+    };
+  }
+
   function assignProfessionalToSchool(input: AssignProfessionalInput): AssignProfessionalResult {
     const existingProfile = findProfileByCpf(input.cpf);
     const nextProfile = existingProfile
@@ -294,6 +460,9 @@ export function PlatformRegistryProvider({ children }: { children: ReactNode }) 
         addSecretariat,
         assignProfessionalToSchool,
         findProfileByCpf,
+        removeProfessionalAssignment,
+        removeSchool,
+        removeSecretariat,
         registerManualSchool,
         registerSchoolFromCatalog,
       }}

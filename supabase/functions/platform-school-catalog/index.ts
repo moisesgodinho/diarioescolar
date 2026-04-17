@@ -69,6 +69,31 @@ function normalizeDigits(value: string | null | undefined) {
   return (value ?? '').replace(/\D/g, '')
 }
 
+function normalizeComparableText(value: string | null | undefined) {
+  return (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase()
+}
+
+function pickCitySearchToken(city: string) {
+  const tokens = city
+    .trim()
+    .split(/[\s/-]+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 3)
+
+  const preferredToken =
+    tokens
+      .filter((token) => normalizeComparableText(token) === token.toLowerCase())
+      .sort((left, right) => right.length - left.length)[0] ??
+    tokens.sort((left, right) => right.length - left.length)[0] ??
+    null
+
+  return preferredToken
+}
+
 function getCacheMaxAgeHours() {
   const rawValue = Deno.env.get('SCHOOL_CATALOG_CACHE_MAX_AGE_HOURS')?.trim()
 
@@ -171,7 +196,32 @@ async function loadCachedCatalog(
     throw new Error(cityError.message)
   }
 
-  return (rowsByCity ?? []) as SchoolCatalogCacheRecord[]
+  if ((rowsByCity ?? []).length > 0) {
+    return (rowsByCity ?? []) as SchoolCatalogCacheRecord[]
+  }
+
+  const citySearchToken = pickCitySearchToken(input.city)
+  let normalizedCityQuery = serviceRoleClient
+    .from('school_catalog_cache')
+    .select(selectClause)
+    .eq('state', input.state)
+    .limit(2000)
+
+  if (citySearchToken) {
+    normalizedCityQuery = normalizedCityQuery.ilike('city', `%${citySearchToken}%`)
+  }
+
+  const { data: fallbackRowsByState, error: fallbackStateError } = await normalizedCityQuery.order('school_name')
+
+  if (fallbackStateError) {
+    throw new Error(fallbackStateError.message)
+  }
+
+  const comparableCity = normalizeComparableText(input.city)
+
+  return ((fallbackRowsByState ?? []) as SchoolCatalogCacheRecord[]).filter(
+    (row) => normalizeComparableText(row.city) === comparableCity,
+  )
 }
 
 async function replaceCachedCatalog(

@@ -6,9 +6,10 @@ import {
   MapPinned,
   Search,
   ShieldCheck,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Link } from 'react-router';
+import { TypedConfirmDialog } from '../components/TypedConfirmDialog';
 import { MetricCard } from '../components/MetricCard';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -50,9 +51,11 @@ function parseStages(value: string) {
 
 export function PlatformSchools() {
   const {
+    professionalAssignments,
     registerManualSchool,
     registeredSchools,
     registerSchoolFromCatalog,
+    removeSchool,
     schoolCatalog,
     secretariats,
   } = usePlatformRegistry();
@@ -67,7 +70,16 @@ export function PlatformSchools() {
   const [loadedCatalogSchools, setLoadedCatalogSchools] = useState<SchoolCatalogEntry[]>([]);
 
   useEffect(() => {
-    if (!selectedSecretariatId && secretariats.length > 0) {
+    if (secretariats.length === 0) {
+      setSelectedSecretariatId('');
+      return;
+    }
+
+    const selectedStillExists = secretariats.some(
+      (secretariat) => secretariat.id === selectedSecretariatId,
+    );
+
+    if (!selectedSecretariatId || !selectedStillExists) {
       setSelectedSecretariatId(secretariats[0].id);
     }
   }, [secretariats, selectedSecretariatId]);
@@ -171,6 +183,19 @@ export function PlatformSchools() {
     setManualFormState(initialManualSchoolFormState);
   }
 
+  function handleRemoveSchool(schoolId: string) {
+    const result = removeSchool(schoolId);
+
+    if (!result.school) {
+      toast.error('Nao foi possivel localizar a escola selecionada.');
+      return;
+    }
+
+    toast.success('Escola removida com sucesso.', {
+      description: `${result.school.name} saiu da rede com ${result.removedAssignmentsCount} vinculo(s) e ${result.removedProfilesCount} perfil(is) sem uso removidos.`,
+    });
+  }
+
   const linkedCatalogKeys = new Set(
     linkedSchools.flatMap((school) =>
       [school.catalogSchoolId, school.inepCode].filter(
@@ -256,24 +281,6 @@ export function PlatformSchools() {
                     O sistema tenta carregar o catalogo da cidade para agilizar o cadastro.
                   </div>
 
-                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                      <div className="space-y-2">
-                        <p className="text-sm font-semibold text-emerald-900">
-                          Importacao centralizada do INEP
-                        </p>
-                        <p className="text-sm leading-6 text-emerald-800">
-                          O upload do CSV saiu desta tela. Agora a leitura daqui usa a base ja
-                          importada na pagina nacional e mostra as escolas da cidade automaticamente.
-                        </p>
-                      </div>
-
-                      <Button asChild type="button" className="rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">
-                        <Link to="/plataforma/importacao-inep">Abrir Importacao INEP Brasil</Link>
-                      </Button>
-                    </div>
-                  </div>
-
                   {catalogAdvisory && (
                     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-700">
                       <div className="flex flex-wrap items-center gap-2">
@@ -314,11 +321,11 @@ export function PlatformSchools() {
                                 </Badge>
                               </div>
                               <p className="mt-2 text-sm text-gray-500">
-                                {school.city}/{school.state} • {school.zone}
+                                {school.city}/{school.state} - {school.zone}
                               </p>
                               {school.address || school.neighborhood ? (
                                 <p className="mt-2 text-sm text-gray-500">
-                                  {[school.address, school.neighborhood].filter(Boolean).join(' â€¢ ')}
+                                  {[school.address, school.neighborhood].filter(Boolean).join(' - ')}
                                 </p>
                               ) : null}
                               {school.administrativeDependency || school.phone || school.operationalStatus ? (
@@ -489,55 +496,87 @@ export function PlatformSchools() {
                 Nenhuma escola vinculada ainda para {selectedSecretariat.city}/{selectedSecretariat.state}.
               </div>
             ) : (
-              linkedSchools.map((school) => (
-                <div key={school.id} className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-gray-900">{school.name}</p>
-                      <p className="mt-1 text-sm text-gray-500">
-                        {school.city}/{school.state}
-                        {school.neighborhood ? ` • ${school.neighborhood}` : ''}
-                      </p>
-                      {school.address ? (
-                        <p className="mt-2 text-sm text-gray-500">{school.address}</p>
+              linkedSchools.map((school) => {
+                const assignmentsCount = professionalAssignments.filter(
+                  (assignment) => assignment.schoolId === school.id,
+                ).length;
+
+                return (
+                  <div key={school.id} className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-gray-900">{school.name}</p>
+                        <p className="mt-1 text-sm text-gray-500">
+                          {school.city}/{school.state}
+                          {school.neighborhood ? ` - ${school.neighborhood}` : ''}
+                        </p>
+                        {school.address ? (
+                          <p className="mt-2 text-sm text-gray-500">{school.address}</p>
+                        ) : null}
+                      </div>
+
+                      <div className="flex flex-col items-end gap-2">
+                        <Badge
+                          className={
+                            school.source === 'inep'
+                              ? 'rounded-full border-blue-100 bg-blue-50 px-3 py-1 text-blue-700'
+                              : 'rounded-full border-amber-100 bg-amber-50 px-3 py-1 text-amber-700'
+                          }
+                        >
+                          {school.source === 'inep' ? 'INEP' : 'Manual'}
+                        </Badge>
+                        <TypedConfirmDialog
+                          title="Remover escola"
+                          description="Essa acao remove a escola da rede selecionada e apaga os vinculos de equipe ligados apenas a ela."
+                          confirmationValue={`REMOVER ${school.name}`}
+                          confirmButtonLabel="Remover escola"
+                          details={
+                            <p>
+                              Impacto previsto: {assignmentsCount} vinculo(s) associado(s) a{' '}
+                              {school.name}.
+                            </p>
+                          }
+                          onConfirm={() => handleRemoveSchool(school.id)}
+                          trigger={
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="rounded-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Remover
+                            </Button>
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {school.administrativeDependency ? (
+                        <Badge className="rounded-full border-violet-100 bg-violet-50 px-3 py-1 text-violet-700">
+                          {school.administrativeDependency}
+                        </Badge>
+                      ) : null}
+                      {school.educationStages.map((stage) => (
+                        <Badge key={stage} className="rounded-full border-cyan-100 bg-cyan-50 px-3 py-1 text-cyan-700">
+                          {stage}
+                        </Badge>
+                      ))}
+                      {school.phone ? (
+                        <Badge className="rounded-full border-emerald-100 bg-emerald-50 px-3 py-1 text-emerald-700">
+                          Tel. {formatPhone(school.phone)}
+                        </Badge>
                       ) : null}
                     </div>
 
-                    <Badge
-                      className={
-                        school.source === 'inep'
-                          ? 'rounded-full border-blue-100 bg-blue-50 px-3 py-1 text-blue-700'
-                          : 'rounded-full border-amber-100 bg-amber-50 px-3 py-1 text-amber-700'
-                      }
-                    >
-                      {school.source === 'inep' ? 'INEP' : 'Manual'}
-                    </Badge>
+                    <p className="mt-3 text-xs text-gray-400">
+                      {school.inepCode ? `Codigo INEP ${school.inepCode}` : 'Sem codigo INEP vinculado'}
+                      {school.operationalStatus ? ` - ${school.operationalStatus}` : ''}
+                    </p>
                   </div>
-
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {school.administrativeDependency ? (
-                      <Badge className="rounded-full border-violet-100 bg-violet-50 px-3 py-1 text-violet-700">
-                        {school.administrativeDependency}
-                      </Badge>
-                    ) : null}
-                    {school.educationStages.map((stage) => (
-                      <Badge key={stage} className="rounded-full border-cyan-100 bg-cyan-50 px-3 py-1 text-cyan-700">
-                        {stage}
-                      </Badge>
-                    ))}
-                    {school.phone ? (
-                      <Badge className="rounded-full border-emerald-100 bg-emerald-50 px-3 py-1 text-emerald-700">
-                        Tel. {formatPhone(school.phone)}
-                      </Badge>
-                    ) : null}
-                  </div>
-
-                  <p className="mt-3 text-xs text-gray-400">
-                    {school.inepCode ? `Codigo INEP ${school.inepCode}` : 'Sem codigo INEP vinculado'}
-                    {school.operationalStatus ? ` â€¢ ${school.operationalStatus}` : ''}
-                  </p>
-                </div>
-              ))
+                );
+              })
             )}
           </CardContent>
         </Card>
